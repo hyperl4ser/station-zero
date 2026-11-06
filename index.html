@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STATION_00 // SIGNAL_CORRUPTED</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            background-color: #040404;
+            color: #00ff66;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 30px;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            animation: crtFlicker 0.15s infinite;
+        }
+
+        .crt {
+            width: 100%;
+            max-width: 900px;
+            background: #0a0a0a;
+            border: 2px solid #00441b;
+            padding: 25px;
+            box-shadow: 0 0 20px rgba(0, 255, 102, 0.15);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .scanlines {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.4) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .crt-roll {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(
+                to bottom,
+                transparent 0%,
+                rgba(0, 255, 102, 0.08) 50%,
+                transparent 100%
+            );
+            height: 20%;
+            pointer-events: none;
+            z-index: 3;
+            animation: roll 8s linear infinite;
+        }
+
+        @keyframes roll {
+            0% { top: -20%; }
+            100% { top: 120%; }
+        }
+
+        @keyframes crtFlicker {
+            0% { opacity: 0.99; }
+            50% { opacity: 1; }
+            100% { opacity: 0.98; }
+        }
+
+        .header { border-bottom: 1px solid #00441b; padding-bottom: 10px; margin-bottom: 20px; }
+        .warning { color: #ff3333; }
+        .success { color: #00ff66; font-weight: bold; }
+        .payload {
+            background: #000;
+            border: 1px dashed #ff3333;
+            color: #ff3333;
+            padding: 15px;
+            font-size: 14px;
+            letter-spacing: 1px;
+            margin: 20px 0;
+            word-break: break-all;
+            line-height: 1.4;
+        }
+        .terminal-input {
+            display: flex;
+            margin-top: 20px;
+        }
+        .terminal-input span { margin-right: 10px; }
+        input[type="text"] {
+            background: transparent;
+            border: none;
+            color: #00ff66;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 16px;
+            outline: none;
+            width: 100%;
+        }
+        #output { margin-top: 15px; white-space: pre-wrap; max-height: 350px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+
+<div class="crt">
+    <div class="scanlines"></div>
+    <div class="crt-roll"></div>
+    
+    <div class="header">
+        <div>[PROJECT 0-ROOT] TRANSMISSION RECEIVER v4.04</div>
+        <div>FREQUENCY: 89.4 MHz (AM) // LOCATION: UNKNOWN</div>
+    </div>
+
+    <div>
+        > CONNECTED TO BROADCAST NODE...<br>
+        > <span class="warning">WARNING: UNKNOWN ENTITY DETECTED ON FREQUENCY</span><br>
+        > RECOVERED ENCRYPTED TRANSMISSION (STATE-MACHINE CIPHER):
+    </div>
+
+    <div class="payload">
+        FQEWA VEXG ZV QTVKXD VKYNVEZ. HUG THKNU NZZGKW ZS KMWCYGURV XQCWGV ZO JQKCYVNKZ. DO VXZ GUGT VHZ BPKDT DGGTS. KDB GUQ KEVG YA QTT.
+    </div>
+
+    <div>
+        > Enter plain text command or decrypted cipher key below.<br>
+        > Type <span style="color:#fff;">'help'</span> for station commands.
+    </div>
+
+    <div id="output"></div>
+
+    <div class="terminal-input">
+        <span>&gt;</span>
+        <input type="text" id="commandInput" autofocus autocomplete="off">
+    </div>
+</div>
+
+<script>
+    console.log("%c[SYSTEM NOTICE]: PORT LOCKED.", "color: red; font-size: 14px;");
+
+    const input = document.getElementById('commandInput');
+    const output = document.getElementById('output');
+    let isTyping = false;
+    let sectorUnlocked = false;
+
+    function typeWriter(text, element, speed = 20, callback = null) {
+        let i = 0;
+        isTyping = true;
+        input.disabled = true;
+
+        function type() {
+            if (i < text.length) {
+                element.innerHTML += text.charAt(i);
+                i++;
+                window.scrollTo(0, document.body.scrollHeight);
+                setTimeout(type, speed);
+            } else {
+                element.innerHTML += "<br>";
+                isTyping = false;
+                input.disabled = false;
+                input.focus();
+                if (callback) callback();
+            }
+        }
+        type();
+    }
+
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !isTyping) {
+            const rawInput = input.value.trim();
+            const cmd = rawInput.toLowerCase();
+            const userLine = document.createElement('div');
+            userLine.innerHTML = `&gt; ${rawInput}`;
+            output.appendChild(userLine);
+            input.value = '';
+
+            const responseLine = document.createElement('div');
+            output.appendChild(responseLine);
+
+            // Büyük/küçük harf ve fazla boşluk toleranslı temizleme filtresi
+            const cleanInput = rawInput.toLowerCase().replace(/\s+/g, ' ');
+            const targetCipherKey = "bunker three is sealed forever. the thing inside is mimicking voices on frequency. do not open the blast doors. may god save us all.";
+
+            if (cleanInput === targetCipherKey) {
+                sectorUnlocked = true;
+                responseLine.className = "success";
+                typeWriter("ACCESS GRANTED. STATE-MACHINE KEY VERIFIED.\n[SUCCESS]: Sector-B Sub-Menu Protocol Unlocked. Type 'sector-b' to access classified logs.", responseLine, 20);
+            } 
+            else if (cmd === 'help') {
+                let helpText = "Available Commands:\n- STATUS: Show frequency state\n- CLEAR: Clear screen\n- DECRYPT: Run automated decryptor\n- LOGS: Read internal station record";
+                if (sectorUnlocked) helpText += "\n- SECTOR-B: [UNLOCKED] Access classified bunker files";
+                else helpText += "\n- SECTOR-B: [LOCKED] Requires state-machine key verification";
+                typeWriter(helpText, responseLine, 15);
+            } 
+            else if (cmd === 'status') {
+                responseLine.className = "warning";
+                typeWriter("SIGNAL STRENGTH: 12% | ENTITY DISTANCE: CLOSING IN... | SECURITY: ACTIVE", responseLine, 25);
+            } 
+            else if (cmd === 'clear') {
+                output.innerHTML = '';
+                isTyping = false;
+                input.disabled = false;
+                input.focus();
+            } 
+            else if (cmd === 'logs') {
+                typeWriter("[LOG 1987-04]: Station operator abandoned post.\n[LOG 1987-05]: Signal is originating from INSIDE the bunker.\n[ARCHIVE NOTE]: State machine sequence shifts continuously based on previous state indices.", responseLine, 20);
+            } 
+            else if (cmd === 'sector-b') {
+                if (sectorUnlocked) {
+                    responseLine.className = "success";
+                    typeWriter("--- SECTOR-B CLASSIFIED FILES ---\n> Audio File: 0-ROOT_FINAL_BROADCAST.wav [CORRUPTED]\n> Visual Asset: entity_blueprint_v2.png\n> Note: They are already outside the door.", responseLine, 25);
+                } else {
+                    responseLine.className = "warning";
+                    typeWriter("ACCESS DENIED: Sector-B requires valid cryptographic clearance. Solve the main broadcast payload.", responseLine, 20);
+                }
+            } 
+            else if (cmd.startsWith('decrypt')) {
+                responseLine.className = "warning";
+                typeWriter("ERROR: Manual override prohibited by station security. Decryption algorithm must be calculated manually by the human operator.", responseLine, 15);
+            } 
+            else {
+                responseLine.className = "warning";
+                typeWriter("ERROR: Unknown command or invalid clearance key.", responseLine, 20);
+            }
+        }
+    });
+</script>
+
+</body>
+</html>
